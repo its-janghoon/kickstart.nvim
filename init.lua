@@ -185,6 +185,9 @@ do
   --  See `:help hlsearch`
   vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
+  -- Add <leader>pv to exit to directory
+  vim.keymap.set('n', '<leader>pv', vim.cmd.Ex)
+
   -- Diagnostic Config & Keymaps
   --  See `:help vim.diagnostic.Opts`
   vim.diagnostic.config {
