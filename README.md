@@ -1,5 +1,20 @@
 # kickstart.nvim
 
+> Janghoon's fork of [kickstart.nvim](https://github.com/nvim-lua/kickstart.nvim)
+> with oil, flash, harpoon, lazygit, render-markdown, sidekick (Redrob Code as the
+> default AI agent), codecompanion and tmux navigation. Needs Neovim 0.12+.
+
+## Quick install
+
+```sh
+# back up any existing config first
+mv "${XDG_CONFIG_HOME:-$HOME/.config}/nvim" "${XDG_CONFIG_HOME:-$HOME/.config}/nvim.bak" 2>/dev/null
+git clone https://github.com/its-janghoon/kickstart.nvim.git "${XDG_CONFIG_HOME:-$HOME/.config}/nvim"
+nvim   # plugins install on first start
+```
+
+Optional tools: `tmux`, `lazygit`, `rg`, `fd`, and the `redrob` CLI for `<leader>aa`.
+
 ## Introduction
 
 A starting point for Neovim that is:

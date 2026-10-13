@@ -23,13 +23,14 @@ require('sidekick').setup {
       enabled = vim.fn.executable 'tmux' == 1,
       create = 'terminal',
     },
-    -- Add your own CLI here, e.g.
-    -- tools = { my_tool = { cmd = { 'my-ai-cli' } } },
+    -- Redrob Code is the default agent (`<leader>aa`). Needs `redrob` on PATH.
+    tools = { redrob = { cmd = { 'redrob' } } },
   },
 }
 local sk = function() return require 'sidekick.cli' end
 vim.keymap.set({ 'n', 't', 'i', 'x' }, '<C-.>', function() sk().focus() end, { desc = 'Sidekick focus' })
-vim.keymap.set('n', '<leader>aa', function() sk().toggle() end, { desc = 'Sidekick toggle CLI' })
+vim.keymap.set('n', '<leader>aa', function() sk().toggle { name = 'redrob', focus = true } end, { desc = 'Sidekick toggle Redrob Code' })
+vim.keymap.set('n', '<leader>ar', function() sk().toggle { name = 'redrob', focus = true } end, { desc = 'Sidekick [R]edrob Code' })
 vim.keymap.set('n', '<leader>as', function() sk().select() end, { desc = 'Sidekick [S]elect CLI' })
 vim.keymap.set('n', '<leader>ad', function() sk().close() end, { desc = 'Sidekick [D]etach session' })
 vim.keymap.set({ 'n', 'x' }, '<leader>at', function() sk().send { msg = '{this}' } end, { desc = 'Sidekick send [T]his' })
