@@ -40,7 +40,24 @@ vim.keymap.set({ 'n', 'x' }, '<leader>ap', function() sk().prompt() end, { desc 
 vim.keymap.set('n', '<leader>ac', function() sk().toggle { name = 'claude', focus = true } end, { desc = 'Sidekick [C]laude' })
 
 -- [[ codecompanion.nvim ]]
-require('codecompanion').setup {}
+-- Redrob Code speaks ACP (opencode-compatible), so reuse the opencode adapter.
+-- Inline edit stays HTTP-only in CodeCompanion; chat edits files via ACP with a diff to accept.
+require('codecompanion').setup {
+  adapters = {
+    acp = {
+      redrob = function()
+        return require('codecompanion.adapters').extend('opencode', {
+          name = 'redrob',
+          formatted_name = 'Redrob Code',
+          commands = { default = { 'redrob', 'acp' } },
+        })
+      end,
+    },
+  },
+  interactions = {
+    chat = { adapter = 'redrob' },
+  },
+}
 vim.keymap.set({ 'n', 'v' }, '<leader>cc', '<Cmd>CodeCompanionChat Toggle<CR>', { desc = 'CodeCompanion [C]hat' })
 vim.keymap.set({ 'n', 'v' }, '<leader>ca', '<Cmd>CodeCompanionActions<CR>', { desc = 'CodeCompanion [A]ctions' })
 vim.keymap.set('v', '<leader>ce', ":'<,'>CodeCompanion ", { desc = 'CodeCompanion inline [E]dit' })
