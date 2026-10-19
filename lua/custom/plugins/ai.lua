@@ -3,8 +3,8 @@
 --    in a side terminal, send file/selection/diagnostics as context.
 --    CLI sessions live in tmux so they survive closing Neovim.
 --    NES (Copilot "next edit suggestions") is off: it needs a Copilot login.
---  * codecompanion.nvim: chat + inline edits with diff review.
---    Default adapter is copilot; set `strategies.*.adapter` for anthropic/openai/ollama.
+--  * codecompanion.nvim: chat with diff review, on Redrob Code over ACP.
+--  * <leader>ce: proofread the paragraph/selection; Redrob Code edits the file in place.
 local function gh(repo) return 'https://github.com/' .. repo end
 
 vim.pack.add {
@@ -60,5 +60,15 @@ require('codecompanion').setup {
 }
 vim.keymap.set({ 'n', 'v' }, '<leader>cc', '<Cmd>CodeCompanionChat Toggle<CR>', { desc = 'CodeCompanion [C]hat' })
 vim.keymap.set({ 'n', 'v' }, '<leader>ca', '<Cmd>CodeCompanionActions<CR>', { desc = 'CodeCompanion [A]ctions' })
-vim.keymap.set('v', '<leader>ce', ":'<,'>CodeCompanion ", { desc = 'CodeCompanion inline [E]dit' })
+-- One key, grammar only: Redrob Code edits the file in place, sidekick reloads the buffer.
+-- Visual: the selection. Normal: the paragraph under the cursor.
+local proofread = 'Proofread ONLY spelling, grammar and punctuation in this passage and edit the file in place. '
+  .. 'Do not change wording, meaning, numbers, tables, citations, markdown, [AUTHOR: ...] or (Anonymous, 2026). '
+  .. 'Reply with one line listing what you changed.\nFile: {position}\nPassage:\n{selection}'
+local function fix_grammar() sk().send { name = 'redrob', msg = proofread, submit = true } end
+vim.keymap.set('x', '<leader>ce', fix_grammar, { desc = 'Redrob: fix grammar ([E]dit selection)' })
+vim.keymap.set('n', '<leader>ce', function()
+  vim.cmd 'normal! vip'
+  fix_grammar()
+end, { desc = 'Redrob: fix grammar ([E]dit paragraph)' })
 vim.keymap.set('v', 'ga', '<Cmd>CodeCompanionChat Add<CR>', { desc = 'Add selection to CodeCompanion chat' })
