@@ -82,7 +82,37 @@ vim.keymap.set({ 'n', 'v' }, '<leader>ca', '<Cmd>CodeCompanionActions<CR>', { de
 vim.keymap.set('x', '<leader>ce', ":'<,'>CodeCompanion ", { desc = 'Inline [E]dit selection' })
 vim.keymap.set('n', '<leader>ce', "vip:'<,'>CodeCompanion ", { desc = 'Inline [E]dit paragraph' })
 -- <leader>aE: same text, but to the Redrob Code side panel (agent can read/edit other files).
-local function edit_in_panel() sk().send { name = 'redrob', msg = '{position}\n{selection}\n', focus = true } end
+-- On a cold start the TUI needs a few seconds before its input exists; text sent earlier is
+-- dropped. So render the text now (while the selection exists), open the panel, and send once
+-- the panel shows its footer.
+local function edit_in_panel()
+  local _, text = sk().render { msg = '{position}\n{selection}\n' }
+  if not text or #text == 0 then return end
+  local send = function() sk().send { name = 'redrob', text = text, focus = true } end
+  if #require('sidekick.cli.state').get { name = 'redrob', started = true } > 0 then return send() end
+  vim.cmd 'normal! \27'
+  sk().show { name = 'redrob', focus = true }
+  local tries = 0
+  local timer = assert(vim.uv.new_timer())
+  timer:start(300, 300, vim.schedule_wrap(function()
+    tries = tries + 1
+    for _, b in ipairs(vim.api.nvim_list_bufs()) do
+      if vim.bo[b].filetype == 'sidekick_terminal' then
+        local lines = table.concat(vim.api.nvim_buf_get_lines(b, 0, -1, false), '\n')
+        if lines:find('ctrl+p', 1, true) then
+          timer:stop()
+          timer:close()
+          return send()
+        end
+      end
+    end
+    if tries > 60 then
+      timer:stop()
+      timer:close()
+      vim.notify('Redrob Code did not start in time; press <leader>aE again', vim.log.levels.WARN)
+    end
+  end))
+end
 vim.keymap.set('x', '<leader>aE', edit_in_panel, { desc = 'Redrob panel: [E]dit selection' })
 vim.keymap.set('n', '<leader>aE', function()
   vim.cmd 'normal! vip'
