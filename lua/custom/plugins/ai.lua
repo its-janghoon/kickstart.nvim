@@ -4,7 +4,7 @@
 --    CLI sessions live in tmux so they survive closing Neovim.
 --    NES (Copilot "next edit suggestions") is off: it needs a Copilot login.
 --  * codecompanion.nvim: chat with diff review, on Redrob Code over ACP.
---  * <leader>ce: send the paragraph/selection with file:line to Redrob Code; you type the ask.
+--  * <leader>ce: inline edit in the editor (Redrob Console API); <leader>aE: same text to the panel.
 local function gh(repo) return 'https://github.com/' .. repo end
 
 vim.pack.add {
@@ -40,8 +40,9 @@ vim.keymap.set({ 'n', 'x' }, '<leader>ap', function() sk().prompt() end, { desc 
 vim.keymap.set('n', '<leader>ac', function() sk().toggle { name = 'claude', focus = true } end, { desc = 'Sidekick [C]laude' })
 
 -- [[ codecompanion.nvim ]]
--- Redrob Code speaks ACP (opencode-compatible), so reuse the opencode adapter.
--- Inline edit stays HTTP-only in CodeCompanion; chat edits files via ACP with a diff to accept.
+-- Chat runs on Redrob Code over ACP (opencode-compatible adapter).
+-- Inline edit needs an HTTP adapter, so it talks to the Redrob Console API directly.
+-- The key is read from `redrob auth login`'s store at request time; nothing is written here.
 require('codecompanion').setup {
   adapters = {
     acp = {
@@ -53,21 +54,40 @@ require('codecompanion').setup {
         })
       end,
     },
+    http = {
+      redrob_api = function()
+        return require('codecompanion.adapters').extend('openai_compatible', {
+          name = 'redrob_api',
+          formatted_name = 'Redrob Console',
+          env = {
+            url = 'https://console.redrob.ai/api/backend',
+            api_key = 'cmd:jq -r .redrob.key ~/.local/share/redrob/auth.json',
+            chat_url = '/v1/chat/completions',
+            models_endpoint = '/v1/models',
+          },
+          schema = { model = { default = 'claude-sonnet-5' } },
+        })
+      end,
+    },
   },
   interactions = {
     chat = { adapter = 'redrob' },
+    inline = { adapter = 'redrob_api' },
   },
 }
 vim.keymap.set({ 'n', 'v' }, '<leader>cc', '<Cmd>CodeCompanionChat Toggle<CR>', { desc = 'CodeCompanion [C]hat' })
 vim.keymap.set({ 'n', 'v' }, '<leader>ca', '<Cmd>CodeCompanionActions<CR>', { desc = 'CodeCompanion [A]ctions' })
--- <leader>ce: hand the paragraph (normal) or selection (visual) to Redrob Code with its
--- file:line, then focus the panel so you type your own instruction. Nothing is pre-written.
-local function edit_here() sk().send { name = 'redrob', msg = '{position}\n{selection}\n', focus = true } end
-vim.keymap.set('x', '<leader>ce', edit_here, { desc = 'Redrob: [E]dit selection' })
-vim.keymap.set('n', '<leader>ce', function()
+-- <leader>ce: edit in the editor. Visual: the selection, normal: the paragraph.
+-- Type your own instruction at the prompt; the change shows as a diff (ga accept, gr reject).
+vim.keymap.set('x', '<leader>ce', ":'<,'>CodeCompanion ", { desc = 'Inline [E]dit selection' })
+vim.keymap.set('n', '<leader>ce', "vip:'<,'>CodeCompanion ", { desc = 'Inline [E]dit paragraph' })
+-- <leader>aE: same text, but to the Redrob Code side panel (agent can read/edit other files).
+local function edit_in_panel() sk().send { name = 'redrob', msg = '{position}\n{selection}\n', focus = true } end
+vim.keymap.set('x', '<leader>aE', edit_in_panel, { desc = 'Redrob panel: [E]dit selection' })
+vim.keymap.set('n', '<leader>aE', function()
   vim.cmd 'normal! vip'
-  edit_here()
-end, { desc = 'Redrob: [E]dit paragraph' })
+  edit_in_panel()
+end, { desc = 'Redrob panel: [E]dit paragraph' })
 -- Entering the sidekick panel always lands in terminal (insert) mode, so keys like `/`
 -- reach Redrob Code instead of starting a Neovim search.
 vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter' }, {
