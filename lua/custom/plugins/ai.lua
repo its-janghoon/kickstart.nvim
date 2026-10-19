@@ -4,7 +4,7 @@
 --    CLI sessions live in tmux so they survive closing Neovim.
 --    NES (Copilot "next edit suggestions") is off: it needs a Copilot login.
 --  * codecompanion.nvim: chat with diff review, on Redrob Code over ACP.
---  * <leader>ce: proofread the paragraph/selection; Redrob Code edits the file in place.
+--  * <leader>ce: send the paragraph/selection with file:line to Redrob Code; you type the ask.
 local function gh(repo) return 'https://github.com/' .. repo end
 
 vim.pack.add {
@@ -60,15 +60,19 @@ require('codecompanion').setup {
 }
 vim.keymap.set({ 'n', 'v' }, '<leader>cc', '<Cmd>CodeCompanionChat Toggle<CR>', { desc = 'CodeCompanion [C]hat' })
 vim.keymap.set({ 'n', 'v' }, '<leader>ca', '<Cmd>CodeCompanionActions<CR>', { desc = 'CodeCompanion [A]ctions' })
--- One key, grammar only: Redrob Code edits the file in place, sidekick reloads the buffer.
--- Visual: the selection. Normal: the paragraph under the cursor.
-local proofread = 'Proofread ONLY spelling, grammar and punctuation in this passage and edit the file in place. '
-  .. 'Do not change wording, meaning, numbers, tables, citations, markdown, [AUTHOR: ...] or (Anonymous, 2026). '
-  .. 'Reply with one line listing what you changed.\nFile: {position}\nPassage:\n{selection}'
-local function fix_grammar() sk().send { name = 'redrob', msg = proofread, submit = true } end
-vim.keymap.set('x', '<leader>ce', fix_grammar, { desc = 'Redrob: fix grammar ([E]dit selection)' })
+-- <leader>ce: hand the paragraph (normal) or selection (visual) to Redrob Code with its
+-- file:line, then focus the panel so you type your own instruction. Nothing is pre-written.
+local function edit_here() sk().send { name = 'redrob', msg = '{position}\n{selection}\n', focus = true } end
+vim.keymap.set('x', '<leader>ce', edit_here, { desc = 'Redrob: [E]dit selection' })
 vim.keymap.set('n', '<leader>ce', function()
   vim.cmd 'normal! vip'
-  fix_grammar()
-end, { desc = 'Redrob: fix grammar ([E]dit paragraph)' })
+  edit_here()
+end, { desc = 'Redrob: [E]dit paragraph' })
+-- Entering the sidekick panel always lands in terminal (insert) mode, so keys like `/`
+-- reach Redrob Code instead of starting a Neovim search.
+vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter' }, {
+  callback = function()
+    if vim.bo.filetype == 'sidekick_terminal' then vim.cmd.startinsert() end
+  end,
+})
 vim.keymap.set('v', 'ga', '<Cmd>CodeCompanionChat Add<CR>', { desc = 'Add selection to CodeCompanion chat' })
