@@ -33,3 +33,15 @@ for i = 1, 4 do
 end
 vim.keymap.set('n', '<leader>mp', function() harpoon:list():prev() end, { desc = 'Harpoon [P]rev' })
 vim.keymap.set('n', '<leader>mn', function() harpoon:list():next() end, { desc = 'Harpoon [N]ext' })
+
+-- Copy the current file's path to the clipboard (works over SSH via OSC 52)
+local function copy_path(mod, what)
+  return function()
+    local p = vim.fn.expand(mod)
+    vim.fn.setreg('+', p)
+    vim.notify('Copied ' .. what .. ': ' .. p)
+  end
+end
+vim.keymap.set('n', '<leader>yp', copy_path('%:p', 'path'), { desc = '[Y]ank file [P]ath (full)' })
+vim.keymap.set('n', '<leader>yr', copy_path('%:.', 'relative path'), { desc = '[Y]ank file path ([R]elative)' })
+vim.keymap.set('n', '<leader>yn', copy_path('%:t', 'name'), { desc = '[Y]ank file [N]ame' })
